@@ -11,6 +11,9 @@ from datetime import datetime
 import random
 from PIL import Image, ImageDraw
 import os
+import requests
+import pandas as pd
+import json
 
 list1 = [2, 5, 8, 12, 23, 16, 19, 20, 4, 1, 13, 14]
 plist = [0.1, 0.6, 0.2, 0.7, 0.52, 0.23, 0.92, 0.81]
@@ -67,7 +70,12 @@ def index(request):
 		cspas = current_SPA_session.objects.get(id_field = 1)
 		curr_sess = cspas.current_spa_session_name
 		#context['ecd'] = spa_sis_dataJSON(curr_sess) #dataJSON
-		context = {'segment': 'index','ecd':spa_sis_dataJSON(curr_sess), 'tasksq':6, 'form': form, 'spa_sessions': spa_sessions, 'current_spa_session': curr_sess,}
+		try:
+			ecd = spa_sis_dataJSON(curr_sess)
+			context = {'segment': 'index','ecd':ecd, 'tasksq':6, 'form': form, 'spa_sessions': spa_sessions, 'current_spa_session': curr_sess,}
+		except:
+			curr_sess = ""
+			context = {'segment': 'index','ecd':dataJSON, 'tasksq':6, 'form': form, 'spa_sessions': spa_sessions, 'current_spa_session': curr_sess,}
 	else:
 		curr_sess = ""
 		context = {'segment': 'index','ecd':dataJSON, 'tasksq':6, 'form': form, 'spa_sessions': spa_sessions, 'current_spa_session': curr_sess,}
@@ -93,19 +101,46 @@ def index(request):
 		context['file_url'] = file_url
 		print(f"file_url: {file_url}")
 
+		#Making predictions with REST API
+		print("Seding POST request!")
+		URL = "http://127.0.0.1:7000/seedling_image/"
+
+		furl = "http://" + request.get_host() + file_url
+		#http://127.0.0.1:8000/media/artichoke21_Nz7KeVg.jpeg
+		print(f"furl: {furl}")
+		#PARAMS = {'url':furl}
+		#files = {'obvius_session_id': '72c2b6f406cdabd578c5fd7598557c52'}
+		files = {'url':str(furl)}
+		r = requests.post(url = URL, data = files)
+		#r = requests.post(url = URL, files = dict(url=furl))
+		
+		#Extracting data in json format
+		apidata = r.json()
+		#print(f"json Response from API: {apidata}")
+		apidatalist = json.loads(apidata)
+		#print(f"list Response from API: {apidatalist}")
+		apidata_df = pd.DataFrame(data=apidatalist, columns=['class','x','y','w','h','confidence'])
+		print(f"apidata_df: {apidata_df}")
 
 		#Open the image
 		imgpath = os.path.join(settings.MEDIA_ROOT, file)
 
 		simg = Image.open(imgpath)
-		draw = ImageDraw.Draw(simg)
-		draw.rectangle((200, 100, 300, 200), outline = "yellow", width = 2)
+		for i in range(len(apidata_df)):
+			draw = ImageDraw.Draw(simg)
+			x1, y1 = apidata_df.loc[i,'x'], apidata_df.loc[i,'y']
+			x2, y2 = x1 + apidata_df.loc[i,'w'], y1 + apidata_df.loc[i,'h']
+			#draw.rectangle((200, 100, 300, 200), outline = "yellow", width = 2)
+			draw.rectangle((x1, y1, x2, y2), outline = "yellow", width = 2)
+
 		nname = file.split(".")[0] + "r.jpg"
 		output_path = os.path.join(settings.MEDIA_ROOT, nname)
 		simg.save(output_path)
 		rfile_url = os.path.join(settings.MEDIA_URL, nname)
 		print(f"rfile_url: {rfile_url}")
 		context['rfile_url'] = rfile_url
+
+
 
 		#if cspas.current_spa_session_name != "Default_session":
 		if cspas:
