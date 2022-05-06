@@ -14,6 +14,7 @@ import os
 import requests
 import pandas as pd
 import json
+import numpy as np
 
 list1 = [2, 5, 8, 12, 23, 16, 19, 20, 4, 1, 13, 14]
 plist = [0.1, 0.6, 0.2, 0.7, 0.52, 0.23, 0.92, 0.81]
@@ -120,6 +121,7 @@ def index(request):
 		apidatalist = json.loads(apidata)
 		#print(f"list Response from API: {apidatalist}")
 		apidata_df = pd.DataFrame(data=apidatalist, columns=['class','x','y','w','h','confidence'])
+		apidata_df = apidata_df.astype({'class': np.int32})
 		print(f"apidata_df: {apidata_df}")
 
 		#Open the image
@@ -127,12 +129,17 @@ def index(request):
 
 		simg = Image.open(imgpath)
 		for i in range(len(apidata_df)):
-			draw = ImageDraw.Draw(simg)
-			x1, y1 = apidata_df.loc[i,'x'], apidata_df.loc[i,'y']
-			x2, y2 = x1 + apidata_df.loc[i,'w'], y1 + apidata_df.loc[i,'h']
-			#draw.rectangle((200, 100, 300, 200), outline = "yellow", width = 2)
-			draw.rectangle((x1, y1, x2, y2), outline = "yellow", width = 2)
-
+			if apidata_df.loc[i,'class'] != 0:
+				draw = ImageDraw.Draw(simg)
+				x1, y1 = apidata_df.loc[i,'x'], apidata_df.loc[i,'y']
+				x2, y2 = x1 + apidata_df.loc[i,'w'], y1 + apidata_df.loc[i,'h']
+				#draw.rectangle((200, 100, 300, 200), outline = "yellow", width = 2)
+				if apidata_df.loc[i,'class'] == 1: oln = "red"
+				if apidata_df.loc[i,'class'] == 2: oln = "yellow"
+				if apidata_df.loc[i,'class'] == 3: oln = "green"
+				draw.rectangle((x1, y1, x2, y2), outline = oln, width = 2)
+			else:
+				print("There was not detected seedlings")
 		nname = file.split(".")[0] + "r.jpg"
 		output_path = os.path.join(settings.MEDIA_ROOT, nname)
 		simg.save(output_path)
@@ -140,7 +147,7 @@ def index(request):
 		print(f"rfile_url: {rfile_url}")
 		context['rfile_url'] = rfile_url
 
-
+		print(apidata_df['class'].eq(3).sum())
 
 		#if cspas.current_spa_session_name != "Default_session":
 		if cspas:
@@ -149,9 +156,13 @@ def index(request):
 			curr_sess = cspas.current_spa_session_name
 			session = seedling_process_analysis.objects.filter(session_name = curr_sess)
 			session.update(tot_artichokes_seedlng_imgs = F('tot_artichokes_seedlng_imgs') + 1)
-			session.update(good_seedling_quality_qty = F('good_seedling_quality_qty') + random.choice(list1))
-			session.update(avrg_seedling_quality_qty = F('avrg_seedling_quality_qty') + random.choice(list1))
-			session.update(bad_seedling_quality_qty = F('bad_seedling_quality_qty') + random.choice(list1))
+			#session.update(good_seedling_quality_qty = F('good_seedling_quality_qty') + random.choice(list1))
+			session.update(good_seedling_quality_qty = F('good_seedling_quality_qty') + int(apidata_df['class'].eq(3).sum()))
+			#session.update(avrg_seedling_quality_qty = F('avrg_seedling_quality_qty') + random.choice(list1))
+			session.update(avrg_seedling_quality_qty = F('avrg_seedling_quality_qty') + int(apidata_df['class'].eq(2).sum()))
+			#session.update(bad_seedling_quality_qty = F('bad_seedling_quality_qty') + random.choice(list1))
+			session.update(bad_seedling_quality_qty = F('bad_seedling_quality_qty') + int(apidata_df['class'].eq(1).sum()))
+
 			totseedlings = session[0].good_seedling_quality_qty + session[0].avrg_seedling_quality_qty + session[0].bad_seedling_quality_qty
 			print(f"totseedlings: {totseedlings}")
 			session.update(good_seedling_quality_prcntg = round((session[0].good_seedling_quality_qty/totseedlings)*100,2))
@@ -165,7 +176,7 @@ def index(request):
 
 			#Create a new seedling img sample object and save it
 			spa = seedling_process_analysis.objects.get(session_name = curr_sess)
-			sis = seedling_img_samples(id = None, img_name = upload.name, spa = spa, img_datetime = datetime.now(), num_seedling_objs = random.choice(list1))
+			sis = seedling_img_samples(id = None, img_name = upload.name, spa = spa, img_datetime = datetime.now(), num_seedling_objs = int(apidata_df[apidata_df['class']>0]['class'].count()))
 			sis.save()
 
 			print(f"spa: {spa}")

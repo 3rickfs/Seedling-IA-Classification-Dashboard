@@ -287,6 +287,8 @@ demo = {
       },
       responsive: true,
       scales: {
+        
+
         yAxes: [{
           barPercentage: 1.6,
           gridLines: {
@@ -295,8 +297,8 @@ demo = {
             zeroLineColor: "transparent",
           },
           ticks: {
-            suggestedMin: 0,
-            suggestedMax: 125,
+            Min: 0,
+            Max: 10,
             padding: 20,
             fontColor: "#9a9a9a"
           }
