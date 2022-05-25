@@ -1,5 +1,10 @@
 from .models import seedling_process_analysis
 from django import forms
+from .widgets import InitialDatePickerInput, FinalDatePickerInput
+
+class SPA_dates(forms.Form):
+	initial_date_field = forms.DateField(widget=InitialDatePickerInput)
+	final_date_field = forms.DateField(widget=FinalDatePickerInput)
 
 class SPA_Form(forms.ModelForm):
 

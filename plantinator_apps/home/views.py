@@ -1,7 +1,8 @@
+from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from json import dumps
 from django.core.files.storage import FileSystemStorage
-from .forms import SPA_Form
+from .forms import SPA_Form, SPA_dates
 from . models import seedling_process_analysis, current_SPA_session, seedling_img_samples
 from django.http import JsonResponse
 from django.core import serializers
@@ -49,6 +50,7 @@ def spa_sis_dataJSON(curr_sess):
 
 	return dataJSON
 
+@login_required(login_url="/login/")
 def index(request):
 	spa_del = False		
 
@@ -63,8 +65,11 @@ def index(request):
 		'dasqplabel': ['good', 'avrg', 'bad'],
 	}
 
+	############# Sending the forms and data models #############
+	rfile_url = os.path.join(settings.MEDIA_URL, 'questionplant.png')
 	dataJSON = dumps(datadict)
 	form = SPA_Form()
+	datepickers = SPA_dates()
 	spa_sessions = seedling_process_analysis.objects.all()
 	cspas = current_SPA_session.objects.all()
 	if cspas: #and not spa_del:
@@ -73,22 +78,22 @@ def index(request):
 		#context['ecd'] = spa_sis_dataJSON(curr_sess) #dataJSON
 		try:
 			ecd = spa_sis_dataJSON(curr_sess)
-			context = {'segment': 'index','ecd':ecd, 'tasksq':6, 'form': form, 'spa_sessions': spa_sessions, 'current_spa_session': curr_sess,}
+			context = {'segment': 'index', 'ecd':ecd, 'tasksq':6, 'rfile_url': rfile_url, 
+					   'form': form, 'datepickers':datepickers, 'spa_sessions': spa_sessions, 
+					   'current_spa_session': curr_sess,}
 		except:
 			curr_sess = ""
-			context = {'segment': 'index','ecd':dataJSON, 'tasksq':6, 'form': form, 'spa_sessions': spa_sessions, 'current_spa_session': curr_sess,}
+			context = {'segment': 'index','ecd':dataJSON, 'tasksq':6, 'rfile_url': rfile_url, 
+					   'form': form, 'datepickers':datepickers, 'spa_sessions': spa_sessions, 
+					   'current_spa_session': curr_sess,}
 	else:
 		curr_sess = ""
-		context = {'segment': 'index','ecd':dataJSON, 'tasksq':6, 'form': form, 'spa_sessions': spa_sessions, 'current_spa_session': curr_sess,}
+		context = {'segment': 'index','ecd':dataJSON, 'tasksq':6, 'rfile_url': rfile_url, 
+				   'form': form, 'datepickers':datepickers, 'spa_sessions': spa_sessions, 
+				   'current_spa_session': curr_sess,}
+	##############################################################
 
-	#if request.method == 'POST':
-	#	form = SPA_Form(request.POST)
-	#	print(form['session_name'].data)
-
-		#unbound_form['subject'].data
-		#if form.is_valid():
-		#	form.save()
-
+	# To process the image uploaded by the user
 	if request.method == 'POST' and request.FILES['upload']:
 		#cspas = current_SPA_session.objects.filter(id_field=1)
 		#cspas = current_SPA_session.objects.all()
@@ -112,7 +117,9 @@ def index(request):
 		#PARAMS = {'url':furl}
 		#files = {'obvius_session_id': '72c2b6f406cdabd578c5fd7598557c52'}
 		files = {'url':str(furl)}
+		###########################REQUEST TO REST API########################
 		r = requests.post(url = URL, data = files)
+		######################################################################
 		#r = requests.post(url = URL, files = dict(url=furl))
 		
 		#Extracting data in json format
@@ -150,6 +157,7 @@ def index(request):
 		print(apidata_df['class'].eq(3).sum())
 
 		#if cspas.current_spa_session_name != "Default_session":
+		#Updating session data after image processing
 		if cspas:
 			print(f"all: {current_SPA_session.objects.all()}")
 			cspas = current_SPA_session.objects.get(id_field = 1)
@@ -215,15 +223,21 @@ def index(request):
 	
 	return render(request, 'home/index.html', context)
 
-
+@login_required(login_url="/login/")
 def post_SPA(request):
 	#request should be ajax and method should be POST
 	if request.is_ajax and request.method == "POST":
 		#get the form data
 		form = SPA_Form(request.POST)
+		formdates = SPA_dates(request.POST)
+
 		#save the data after fetch object in instance
-		if form.is_valid():
-			instance = form.save()
+		if form.is_valid() and formdates.is_valid():
+			instance = form.save(commit=False)
+			instance.spa_session_idate = formdates.cleaned_data['initial_date_field']
+			instance.spa_session_fdate = formdates.cleaned_data['final_date_field']
+			instance.save()
+
 			#bound_form['subject'].data
 			#reporter = Reporters.objects.filter(name='Tintin')
 			#reporter.update(stories_filed=F('stories_filed') + 1)
@@ -236,12 +250,17 @@ def post_SPA(request):
 				cspas = current_SPA_session.objects.create(id_field=1, current_spa_session_name="Default_session")
 				cspas.save()
 			
+			#Updating current_spa_session_name model with the current session name and about dates to filter seedling process analysis model
 			cspas = current_SPA_session.objects.filter(pk=1)
 			cspas.update(current_spa_session_name = form.cleaned_data['session_name'])
+			
+			#cspas.update(spa_session_idate = formdates.cleaned_data['initial_date_field'])
+			#cspas.update(spa_session_fdate = formdates.cleaned_data['final_date_field'])
 
 			print(f"Session_name: {form.cleaned_data['session_name']}")
 			#serialize in new friend object in json
 			ser_instance = serializers.serialize('json', [ instance, ])
+			#ser_dateinstance = serializers.serialize('json', [ formdates.cleaned_data['initial_date_field'], formdates.cleaned_data['initial_date_field']])
 			#send to client side
 			#cspas = current_SPA_session.objects.get(id_field = 1)
 			#return JsonResponse({"instance": ser_instance, "currspasess": cspas.current_spa_session_name}, status=200)
@@ -270,3 +289,16 @@ def post_SPA(request):
 
 	#some error occured
 	return JsonResponse({"error": ""}, status=400)
+
+#This screen for guests
+@login_required(login_url="/login/")
+def dashboard_admin(request):
+	#context = {'segment': 'dashboard_invitado'}
+	context = {}
+	load_template = request.path.split('/')[-1]
+
+	#if load_template == 'admin':
+	#	return HttpResponseRedirect(reverse('admin:index'))
+	context['segment'] = load_template
+
+	return render(request,'home/dashboard_admin.html', context)

@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'plantinator_apps.home',
+    'plantinator_apps.authentication',
 ]
 
 MIDDLEWARE = [
@@ -53,6 +54,7 @@ MIDDLEWARE = [
 ROOT_URLCONF = 'plantinator_dashboard.urls'
 #LOGIN_REDIRECT_URL = "home"  # Route defined in home/urls.py
 #LOGOUT_REDIRECT_URL = "home"  # Route defined in home/urls.py
+LOGOUT_REDIRECT_URL = "/"
 TEMPLATE_DIR = os.path.join(BASE_DIR, "plantinator_apps/templates")  # ROOT dir for templates
 
 TEMPLATES = [

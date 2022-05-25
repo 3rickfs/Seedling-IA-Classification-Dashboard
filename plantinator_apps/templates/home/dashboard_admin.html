@@ -35,20 +35,6 @@
                     {{ field }}
                   </div>
                   {% endfor %}
-
-                  <table class="form-group col-12 text-center">
-                    <tr>
-                      <td>
-                        {{ datepickers.initial_date_field.label }}: 
-                        {{ datepickers.initial_date_field }}
-                      </td>
-                      <td>
-                        {{ datepickers.final_date_field.label }}: 
-                        {{ datepickers.final_date_field }}
-                      </td>
-                    </tr>
-                  </table>
-
                   <div class="col-12 text-center">
                     <p><input type="submit" class="btn btn-primary" value="New SPA"></p>
                   </div>
@@ -65,13 +51,68 @@
           </div>
         </div>
       </div>
+    </div>
+
+    <div class="row">
+      <div class="col-lg">
+        <div class="card card-chart">
+          <div class="card-header">
+            <div class="row">
+              <div class="col-sm-12 text-left">
+                <h5 class="card-category">Main artichoke seedlings</h5>
+                <h2 class="card-title">Image</h2>
+              </div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="col-sm-12 text-center">
+              <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                  <input type="file" name="upload" accept="image/*">
+                  <br>
+                  <button class="btn btn-dark my-4" type="submit">Submit</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <div class="col-lg">
         <div class="card card-chart">
           <div class="card-header">
             <div class="row">
               <div class="col-sm-12 text-left">
-                <h5 class="card-category">Image recieved</h5>
+                <h5 class="card-category">The model will process the following</h5>
+                <h2 class="card-title">Artichokes</h2>
+              </div>
+            </div>
+          </div>
+          <div class="card-body">
+            <!--See image uploaded-->
+            <div class="row">
+              <div class="col-sm-12 text-center">
+                {% if file_url %}
+                  <div class="col-lg-12">
+                    <img src="{{ file_url }}" width="200" height="100">
+                    <br>
+                  </div>
+                {% else %}
+                  <div class="col-lg-12 text-center">
+                    <p>No seedling image added.</p>
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div> 
+
+      <div class="col-lg">
+        <div class="card card-chart">
+          <div class="card-header">
+            <div class="row">
+              <div class="col-sm-12 text-left">
+                <h5 class="card-category">Output Image</h5>
                 <h2 class="card-title">Detected Artichokes</h2>
               </div>
             </div>
@@ -82,7 +123,7 @@
               <div class="col-sm-12 text-center">
                 {% if rfile_url %}
                   <div class="col-lg-12">
-                    <img src="{{ rfile_url }}" width="400" height="300">
+                    <img src="{{ rfile_url }}" width="200" height="100">
                     <br>
                   </div>
                 {% else %}
@@ -97,8 +138,6 @@
       </div>
 
     </div>
-
-    
 
     <div class="row">
       <div class="col-lg-4">
@@ -164,8 +203,6 @@
             <th>Good seedling quality percentage</th>
             <th>Average seedling quality percentage</th>
             <th>Bad seedling quality percentage</th>
-            <th>Initial date period</th>
-            <th>Final date period</th>
           </tr>
         </thead>
         <tbody>
@@ -179,8 +216,6 @@
             <td>{{spa_session.good_seedling_quality_prcntg}}</td>
             <td>{{spa_session.avrg_seedling_quality_prcntg}}</td>
             <td>{{spa_session.bad_seedling_quality_prcntg}}</td>
-            <td>{{spa_session.spa_session_idate}}</td>
-            <td>{{spa_session.spa_session_fdate}}</td>
         </tr>
         {% endfor %}
         </tbody>
@@ -222,6 +257,7 @@
           // display the newly friend to table.
           var instance = JSON.parse(response["instance"]);
           var fields = instance[0]["fields"];
+
           
           $("#curr_sess").html(fields["session_name"]); //currsessname[0]);//currsessname;
 
@@ -235,8 +271,6 @@
             <td>${fields["good_seedling_quality_prcntg"]||""}</td>
             <td>${fields["avrg_seedling_quality_prcntg"]||""}</td>
             <td>${fields["bad_seedling_quality_prcntg"]||""}</td>
-            <td>${fields["spa_session_idate"]||""}</td>
-            <td>${fields["spa_session_fdate"]||""}</td>
             </tr>`
           );
 
@@ -326,11 +360,6 @@
   </script>
 
 {% endblock javascripts %}
-
-
-
-
-
 
 
 

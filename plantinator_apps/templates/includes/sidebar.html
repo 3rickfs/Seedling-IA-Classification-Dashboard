@@ -10,15 +10,26 @@
         </div>
 
         <ul class="nav">
-
+          {% if request.user.is_staff %}
+            <li class="{% if 'dashboard_admin' in segment %} active {% endif %}">
+              <a href="{% url 'home:dashboard_admin' %}">
+                <i class="tim-icons icon-chart-bar-32"></i>
+                <p>Dashboard de admin</p>
+              </a>
+            </li>
+          {% endif %}
           <li class="{% if 'index' in segment %} active {% endif %}">
             <a href="/">
               <i class="tim-icons icon-chart-pie-36"></i>
-              <p>Dashboard</p>
+              <p>Dashboard de invitado</p>
             </a>
           </li>
-                              
+          <li>
+            <a href="{% url 'authentication:logout' %}" >
+              <i class="tim-icons icon-button-power"></i>
+              <p>Logout</p>
+            </a>
+          </li>
         </ul>
-        
       </div>
     </div>

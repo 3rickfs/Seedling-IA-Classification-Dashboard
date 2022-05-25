@@ -20,7 +20,10 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path("", include("plantinator_apps.home.urls")),             # UI Kits Html files
+    path("", include(("plantinator_apps.authentication.urls","authentication"), namespace='authentication')), # Auth routes - login / register
+    #path("", include("plantinator_apps.home.urls")),             # UI Kits Html files
+    path("", include(('plantinator_apps.home.urls','home'), namespace='home'))
+    #path("", include("plantinator_apps.home.urls", namespace='home'))
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

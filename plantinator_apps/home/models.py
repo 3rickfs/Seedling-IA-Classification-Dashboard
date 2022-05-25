@@ -10,6 +10,8 @@ class seedling_process_analysis(models.Model):
 	good_seedling_quality_prcntg = models.FloatField(default = 0.0, editable = False)
 	avrg_seedling_quality_prcntg = models.FloatField(default = 0.0, editable = False)
 	bad_seedling_quality_prcntg = models.FloatField(default = 0.0, editable = False) #null = True, blank = True
+	spa_session_idate = models.DateField(null=True, editable=False)
+	spa_session_fdate = models.DateField(null=True, editable=False)
 	
 	def __str__(self):
 		return self.session_name
