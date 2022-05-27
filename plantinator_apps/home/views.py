@@ -1,4 +1,5 @@
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import render
 from json import dumps
 from django.core.files.storage import FileSystemStorage
@@ -50,10 +51,55 @@ def spa_sis_dataJSON(curr_sess):
 
 	return dataJSON
 
+@csrf_exempt
+def bridge_script_webapp(request):
+	if request.method == 'POST':
+		data = json.loads(request.POST.get('data'))
+		print("Working on processing data sent by the python script robot")
+		#print(data)
+		#print(data['prediction_1'])
+
+		cspas = current_SPA_session.objects.get(id_field = 1)
+		curr_sess = cspas.current_spa_session_name
+
+		res = None
+
+		#try:
+		for r, rn in enumerate(data):
+			print(f"row: {r}")
+			print(f"name row: {rn}")
+			print(f"row data: {data[rn][1]}")
+			#datalist = list()
+			#for r in range(8):
+				#print(r)
+			rid, pdate, ptime, nseed, q1, q2, q3, state = data[rn][0], data[rn][1], data[rn][2], data[rn][3], data[rn][4], data[rn][5], data[rn][6],data[rn][7]
+
+			#I must also filter by date 
+			session = seedling_process_analysis.objects.filter(session_name = curr_sess)
+			session.update(tot_artichokes_seedlng_imgs = F('tot_artichokes_seedlng_imgs') + 1)
+			session.update(good_seedling_quality_qty = F('good_seedling_quality_qty') + int(q1))
+			session.update(avrg_seedling_quality_qty = F('avrg_seedling_quality_qty') + int(q2))
+			session.update(bad_seedling_quality_qty = F('bad_seedling_quality_qty') + int(q3))
+			print("qualities updated")
+			totseedlings = session[0].good_seedling_quality_qty + session[0].avrg_seedling_quality_qty + session[0].bad_seedling_quality_qty
+			print(f"totseedlings: {totseedlings}")
+			session.update(good_seedling_quality_prcntg = round((session[0].good_seedling_quality_qty/totseedlings)*100,2))
+			session.update(avrg_seedling_quality_prcntg = round((session[0].avrg_seedling_quality_qty/totseedlings)*100,2))
+			session.update(bad_seedling_quality_prcntg = round((session[0].bad_seedling_quality_qty/totseedlings)*100,2))
+
+		#	res = 'ok'
+		#except Exception as e:
+		#	print(f"An error occurred: {e.__class__}")
+		#	res = 'not ok'
+
+		return JsonResponse({'res':'ok'}, safe=False)
+
+
+
 @login_required(login_url="/login/")
 def index(request):
 	spa_del = False		
-
+	print("index gotten!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 	#dummy data in case there is no SPA session initated
 	datadict = {
 		'exchda': [1, 20, 30, 40, 50, 60, 50, 40, 30, 20, 10, 1],
@@ -94,10 +140,17 @@ def index(request):
 	##############################################################
 
 	# To process the image uploaded by the user
-	if request.method == 'POST' and request.FILES['upload']:
+	if request.method == 'POST' and request.FILES['data']:
+	#if request.method == 'POST' and request.FILES['upload']:
 		#cspas = current_SPA_session.objects.filter(id_field=1)
 		#cspas = current_SPA_session.objects.all()
+		
+		#data = request.FILES['data']
+		#print(data)
 
+		#return JsonResponse({'res':'ok'}, safe=False)
+
+		
 		upload = request.FILES['upload']
 		fss = FileSystemStorage()
 		print(f"upload: {upload}")
@@ -162,6 +215,7 @@ def index(request):
 			print(f"all: {current_SPA_session.objects.all()}")
 			cspas = current_SPA_session.objects.get(id_field = 1)
 			curr_sess = cspas.current_spa_session_name
+			#I must also filter by date 
 			session = seedling_process_analysis.objects.filter(session_name = curr_sess)
 			session.update(tot_artichokes_seedlng_imgs = F('tot_artichokes_seedlng_imgs') + 1)
 			#session.update(good_seedling_quality_qty = F('good_seedling_quality_qty') + random.choice(list1))
